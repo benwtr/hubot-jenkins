@@ -105,12 +105,12 @@ jenkinsDescribe = (msg) ->
     jenkinsRequest msg, path, (err, req) ->
       if err
         msg.reply "Failed to create jenkins request", err
-      else if res.statusCode == 401
-        msg.send "Invalid credentials"
       else
         req.get() (err, res, body) ->
             if err
               msg.send "Jenkins says: #{err}"
+            else if res.statusCode == 401
+              msg.send "Invalid credentials"
             else
               response = ""
               try
@@ -152,12 +152,12 @@ jenkinsDescribe = (msg) ->
                 jenkinsRequest msg, path, (err, req) ->
                   if err
                     msg.reply "Failed to create jenkins request", err
-                  else if res.statusCode == 401
-                    msg.send "Invalid credentials"
                   else
                     req.get() (err, res, body) ->
                         if err
                           msg.send "Jenkins says: #{err}"
+                        else if res.statusCode == 401
+                          msg.send "Invalid credentials"
                         else
                           response = ""
                           try
