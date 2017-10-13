@@ -1,19 +1,17 @@
-#Description:
- Interact with your Jenkins CI server
+# hubot-jenkins-userauth
 
-#Dependencies:
- None
+Interact with Jenkins using your jenkins user
 
-#Configuration:
-* HUBOT_JENKINS_URL
-* HUBOT_JENKINS_AUTH
+See [`src/hubot-jenkins-userauth.coffee`](src/hubot-jenkins-userauth.coffee) for full documentation.
 
-Auth should be in the `user:password` format.
+## Installation
 
-#Commands:
-* hubot jenkins b <jobNumber> - builds the job specified by jobNumber. List jobs to get number.
-* hubot jenkins build <job> - builds the specified Jenkins job
-* hubot jenkins build <job>, <params> - builds the specified Jenkins job with parameters as key=value&key2=value2
-* hubot jenkins list <filter> - lists Jenkins jobs
-* hubot jenkins describe <job> - Describes the specified Jenkins job
-* hubot jenkins last <job> - Details about the last build for the specified Jenkins job
+In hubot project repo, run:
+
+`npm install hubot-jenkins-userauth --save`
+
+Then add **hubot-jenkins-userauth** to your `external-scripts.json`:
+
+```json
+["hubot-jenkins-userauth"]
+```
