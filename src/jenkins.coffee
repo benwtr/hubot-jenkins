@@ -15,6 +15,7 @@
 #   hubot jenkins build <job> - builds the specified Jenkins job
 #   hubot jenkins build <job>, <params> - builds the specified Jenkins job with parameters as key=value&key2=value2
 #   hubot jenkins list <filter> - lists Jenkins jobs
+#   hubot jenkins ls </optional/folder/path> - ls Jenkins jobs
 #   hubot jenkins describe <job> - Describes the specified Jenkins job
 #   hubot jenkins last <job> - Details about the last build for the specified Jenkins job
 #   hubot jenkins set auth <user:apitoken> - Set jenkins credentials (get token from https://<jenkins>/user/<user>/configure)
@@ -49,8 +50,12 @@ jenkinsUserCredentials = (msg) ->
   user_id = msg.envelope.user.id
   decrypt(msg.robot.brain.data.users[user_id].jenkins_auth)
 
+folderizePath = (path) ->
+  path = '/' + path
+  path = path.replace(/\/{1,}/, '/').replace(/\/$/, '').split('/').join('/job/')
+  path
 
-fillAuth = (req) ->
+fillAuth = (req, msg) ->
   if jenkinsUserCredentials(msg)
     auth = new Buffer(jenkinsUserCredentials(msg)).toString('base64')
     req.headers Authorization: "Basic #{auth}"
@@ -58,7 +63,7 @@ fillAuth = (req) ->
 jenkinsRequest = (msg, path, cb) ->
   req = msg.http(path)
 
-  fillAuth(req)
+  fillAuth(req, msg)
   req.header('Content-Length', 0)
 
   if process.env.HUBOT_JENKINS_CRUMB
@@ -75,7 +80,7 @@ getJenkinsCrumb = (msg, cb) ->
   url = process.env.HUBOT_JENKINS_URL
   path = "#{url}/crumbIssuer/api/json"
   req = msg.http(path)
-  fillAuth(req)
+  fillAuth(req, msg)
   req.get() (err, res, body) ->
     if err
       cb(new Error("Failed to fetch crumb from jenkins", err))
@@ -88,10 +93,11 @@ getJenkinsCrumb = (msg, cb) ->
 jenkinsBuild = (msg, buildWithEmptyParameters) ->
   url = process.env.HUBOT_JENKINS_URL
   unescapedJob = msg.match[1]
-  job = querystring.escape unescapedJob
+  #job = querystring.escape unescapedJob
+  job = folderizePath unescapedJob
   params = msg.match[3]
   command = if buildWithEmptyParameters then "buildWithParameters" else "build"
-  path = if params then "#{url}/job/#{job}/buildWithParameters?#{params}" else "#{url}/job/#{job}/#{command}"
+  path = if params then "#{url}#{job}/buildWithParameters?#{params}" else "#{url}#{job}/#{command}"
 
   jenkinsRequest msg, path, (err, req) ->
     if err
@@ -109,9 +115,8 @@ jenkinsBuild = (msg, buildWithEmptyParameters) ->
 
 jenkinsDescribe = (msg) ->
   url = process.env.HUBOT_JENKINS_URL
-  job = msg.match[1]
-
-  path = "#{url}/job/#{job}/api/json"
+  job = folderizePath msg.match[1]
+  path = "#{url}#{job}/api/json"
 
   jenkinsRequest msg, path, (err, req) ->
     if err
@@ -187,9 +192,9 @@ jenkinsDescribe = (msg) ->
 
 jenkinsLast = (msg) ->
   url = process.env.HUBOT_JENKINS_URL
-  job = msg.match[1]
+  job = folderizePath msg.match[1]
 
-  path = "#{url}/job/#{job}/lastBuild/api/json"
+  path = "#{url}#{job}/lastBuild/api/json"
 
   jenkinsRequest msg, path, (err, req) ->
     if err
@@ -248,6 +253,35 @@ jenkinsList = (msg) ->
           catch error
             msg.send error
 
+jenkinsLS = (msg) ->
+  url = process.env.HUBOT_JENKINS_URL
+  job_path = msg.match[2] || '/'
+  path = url + folderizePath(job_path) + "/api/json"
+
+  jenkinsRequest msg, path, (err, req) ->
+    if err
+      msg.reply "Failed to create jenkins request", err
+    else
+      req.get() (err, res, body) ->
+        response = ""
+        if err
+          msg.send "Jenkins says: #{err}"
+        else if res.statusCode == 401
+          msg.send "Invalid credentials"
+        else
+          try
+            content = JSON.parse(body)
+            folderListing = []
+            for job in content.jobs
+              do (job) ->
+                if job._class == 'com.cloudbees.hudson.plugins.folder.Folder'
+                  folderListing.push "#{job.name}/"
+                else if job._class =~ /hudson\.model\..*Project/
+                  folderListing.push job.name
+            msg.send(folderListing.sort().join("\n"))
+          catch error
+            msg.send error
+
 jenkinsAuth = (msg) ->
   user_id = msg.envelope.user.id
   credentials = msg.match[1].trim()
@@ -255,11 +289,14 @@ jenkinsAuth = (msg) ->
   msg.send "Saved jenkins credentials for #{user_id}"
 
 module.exports = (robot) ->
-  robot.respond /j(?:enkins)? build ([\w\.\-_ ]+)(, (.+))?/i, (msg) ->
+  robot.respond /j(?:enkins)? build ([\w\.\-_\/ ]+)(, (.+))?/i, (msg) ->
     jenkinsBuild(msg, false)
 
   robot.respond /j(?:enkins)? list( (.+))?/i, (msg) ->
     jenkinsList(msg)
+
+  robot.respond /j(?:enkins)? ls( (.+))?/i, (msg) ->
+    jenkinsLS(msg)
 
   robot.respond /j(?:enkins)? describe (.*)/i, (msg) ->
     jenkinsDescribe(msg)
