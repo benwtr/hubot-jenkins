@@ -49,15 +49,6 @@ jenkinsUserCredentials = (msg) ->
   user_id = msg.envelope.user.id
   decrypt(msg.robot.brain.data.users[user_id].jenkins_auth)
 
-jenkinsBuildById = (msg) ->
-  # Switch the index with the job name
-  job = jobList[parseInt(msg.match[1]) - 1]
-
-  if job
-    msg.match[1] = job
-    jenkinsBuild(msg)
-  else
-    msg.reply "I couldn't find that job. Try `jenkins list` to get a list."
 
 fillAuth = (req) ->
   if jenkinsUserCredentials(msg)
@@ -266,9 +257,6 @@ jenkinsAuth = (msg) ->
 module.exports = (robot) ->
   robot.respond /j(?:enkins)? build ([\w\.\-_ ]+)(, (.+))?/i, (msg) ->
     jenkinsBuild(msg, false)
-
-  robot.respond /j(?:enkins)? b (\d+)/i, (msg) ->
-    jenkinsBuildById(msg)
 
   robot.respond /j(?:enkins)? list( (.+))?/i, (msg) ->
     jenkinsList(msg)
