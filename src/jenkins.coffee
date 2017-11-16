@@ -11,7 +11,6 @@
 #   HUBOT_JENKINS_CRYPTO_SECRET - secret for encrypting/decrypting user credential
 #
 # Commands:
-#   hubot jenkins b <jobNumber> - builds the job specified by jobNumber. List jobs to get number.
 #   hubot jenkins build <job> - builds the specified Jenkins job
 #   hubot jenkins build <job>, <params> - builds the specified Jenkins job with parameters as key=value&key2=value2
 #   hubot jenkins list <filter> - lists Jenkins jobs
@@ -93,7 +92,6 @@ getJenkinsCrumb = (msg, cb) ->
 jenkinsBuild = (msg, buildWithEmptyParameters) ->
   url = process.env.HUBOT_JENKINS_URL
   unescapedJob = msg.match[1]
-  #job = querystring.escape unescapedJob
   job = folderizePath unescapedJob
   params = msg.match[3]
   command = if buildWithEmptyParameters then "buildWithParameters" else "build"
@@ -107,7 +105,7 @@ jenkinsBuild = (msg, buildWithEmptyParameters) ->
         if err
           msg.reply "Jenkins says: #{err}"
         else if 200 <= res.statusCode < 400 # Or, not an error code.
-          msg.reply "(#{res.statusCode}) Build started for #{unescapedJob} #{url}/job/#{job}"
+          msg.reply "(#{res.statusCode}) Build started for #{unescapedJob} #{url}#{job}"
         else if 400 == res.statusCode
           jenkinsBuild(msg, true)
         else
@@ -164,7 +162,7 @@ jenkinsDescribe = (msg) ->
             if not content.lastBuild
               return
 
-            path = "#{url}/job/#{job}/#{content.lastBuild.number}/api/json"
+            path = "#{url}#{job}/#{content.lastBuild.number}/api/json"
             jenkinsRequest msg, path, (err, req) ->
               if err
                 msg.reply "Failed to create jenkins request", err
