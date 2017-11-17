@@ -2,7 +2,7 @@
 
 Interact with Jenkins using your jenkins user
 
-See [`src/hubot-jenkins-userauth.coffee`](src/hubot-jenkins-userauth.coffee) for full documentation.
+See [`src/jenkins.coffee`](src/jenkins.coffee) for full documentation.
 
 ## Installation
 
